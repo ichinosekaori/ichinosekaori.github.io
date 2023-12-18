@@ -1,0 +1,30 @@
+name: Deploy site
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Install tectonic
+        run: "curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net |sh"
+      - name: Install into /usr/bin
+        run: "sudo cp tectonic /usr/bin"
+      - name: Run script
+        run: "python -m venv venv && source venv/bin/activate && pip install jinja2 && python generate.py"
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3

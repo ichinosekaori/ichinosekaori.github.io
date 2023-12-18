@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kaori's Little Homepage</title>
+</head>
+<body>
+    <h1>Kaori's Little Homepage</h1>
+    <p>A list of files available:</p>
+    <ul>
+        {% for file in files %}
+        <li><a href="{{ file }}.pdf">{{ file }}.pdf</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
