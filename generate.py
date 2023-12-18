@@ -5,7 +5,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 ENCODING = "utf-8"
 
 def main(root: Path):
-    files = [f.stem for f in root.glob("*.tex")]
+    files = sorted([f.stem for f in root.glob("*.tex")])
     for f in files:
         run(["tectonic", f + ".tex"])
     env = Environment(loader=FileSystemLoader(root / "templates"), autoescape=select_autoescape())
