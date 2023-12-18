@@ -20,7 +20,7 @@ jobs:
       - name: Install into /usr/bin
         run: "sudo cp tectonic /usr/bin"
       - name: Run script
-        run: "python -m venv venv && source venv/bin/activate && pip install jinja2 && python generate.py"
+        run: "python -m venv venv && source venv/bin/activate && pip install jinja2 && python generate.py && rm -rf venv"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
