@@ -1,0 +1,227 @@
+\documentclass{beamer}
+
+\title[FP Compilers]{Pointers to General Resources on FP Language Compiler Construction}
+\author{Ichinose Kaori}
+\date{January 28, 2024}
+
+\usepackage{tikz-cd}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usetheme{Boadilla}
+\usecolortheme{beaver}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{TL; DW (1)}
+  \begin{itemize}
+  \item \url{https://matt.might.net/articles/cps-conversion/}
+  \item \url{https://matt.might.net/articles/compiling-scheme-to-c/}
+  \item \url{https://github.com/akeep/scheme-to-c/}
+  \item \url{http://churchturing.org/y/90-min-scc.pdf}
+  \item \url{https://www.youtube.com/watch?v=Bp89aBm9tGU}
+  \item \url{https://www.youtube.com/watch?v=M4dwcdK5bxE}
+  \item \url{https://gist.github.com/nyuichi/1116686}
+  \item \url{http://scheme2006.cs.uchicago.edu/11-ghuloum.pdf}
+  \item \url{https://github.com/ichinosekaori/yass/} (possibly later)
+  \item \textit{Compiling with Continuations}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Goals}
+  \begin{itemize}
+    \item To demonstrate compiling a functional programming language to a fairly low-level language (register VM bytecode)
+    \item Do it using a simple functional language
+    \item Do it using a fairly conventional VM (with the ISA mimicking commercial CPU designs)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Overview of Scheme (1)}
+  Primitive forms:
+  \begin{itemize}
+  \item Variable reference
+  \item Quotation
+  \item Procedure call
+  \item Abstraction
+  \item Assignment
+  \item Conditional
+  \end{itemize}
+
+  Other forms are built upon these primitives through the use of macros written in the same language (Scheme)
+
+  Some data usually not first-class are first-class: functions, continuations, environments. 
+\end{frame}
+
+\begin{frame}{Overview of Scheme (2)}
+  Primitive data structures:
+  \begin{itemize}
+  \item The Cons
+  \item Vector
+  \item (Bytevector)
+  \end{itemize}
+
+  You can build (functional even!) arrays out of conses (think segment trees) but vectors are faster; bytevectors are more compact.
+
+  Data could be freed when no longer accessible, by the garbage collector.
+\end{frame}
+
+\begin{frame}{Overview of the VM}
+  \begin{itemize}
+  \item mov
+  \item ld, st
+  \item ldi
+  \item $R_d\gets R_a\operatorname{op}R_b$ (or unary; for arithmetic and logical operations)
+  \item jmp
+  \item je
+  \item int (``hypercalls'')
+  \item Used for avoiding outputing PE/ELF/Mach-O and complex instruction encoding
+  \end{itemize}
+
+  where $R$ can be $X$ for 64-bit integers or $D$ for double-precision floats.
+\end{frame}
+
+\begin{frame}{Merits of programming in Scheme}
+  \begin{itemize}
+  \item small base
+  \item extensibility
+  \item \url{http://practical-scheme.net/docs/schemersway.html}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Gaps between source and target languages}
+  \begin{itemize}
+  \item No notion of abstractions in the target
+  \item No memory management in the target
+  \item Target works on numbers
+  \item Registers are limited in number
+  \item Nowhere to store computation state
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Compiler organization}
+  \[\begin{tikzcd}
+\text{Scheme} \arrow[d]           & \text{Closed} \arrow[r]      & \text{Indexed} \arrow[d, "\text{register allocation}" description]      \\
+\text{Primitive Scheme} \arrow[d] & \text{Known-adic} \arrow[u, "\text{closure conversion}"]  & \text{Bounded-free} \arrow[d] \\
+\text{Scheme form} \arrow[d]      & \text{CPS} \arrow[u]         & \text{VM bytecode}            \\
+\text{Unique-names} \arrow[r]     & \text{Assignless} \arrow[u, "\text{CPS transform}" description] &                              
+\end{tikzcd}\]
+
+Labeled passes are more traditional passes found in compilers for functional programming languages.
+\end{frame}
+
+\begin{frame}{Rationale for CPS}
+  \begin{itemize}
+  \item Explicit continuations
+  \item Continuations reified as functions for free
+  %\item We have mutable state so we get delimited continuations as well (cf. \textit{Representing Monads})
+  \end{itemize}
+  
+  \[callcc(k, f)=f(k, \lambda x.\lambda y.k(y))\]
+\end{frame}
+
+\newcommand{\CPS}{\operatorname{CPS}}
+
+\begin{frame}{CPS for the Lambda Calculus}
+  \[t ::= x \mid \lambda x.t \mid t(t)\]
+  
+  \[\CPS(x, k)=k(x)\]
+  \[\CPS(\lambda x.t, c)=c(\lambda k.\lambda x. \CPS(t, k))\]
+  \[\CPS(t_1(t_2), k)=\CPS(t_1,\lambda r_1.\CPS(t_2,\lambda r_2.r_1(k)(r_2)))\]
+\end{frame}
+
+\begin{frame}{Generalizing}
+  Scheme has more primitives, including quotations, conditionals, and multiple arguments.
+
+  \[\CPS('a,k)=k('a)\]
+  \[\begin{aligned}
+    &\CPS(\text{if }c\text{ then }a\text{ else }b, k)\\
+    =&\CPS(c, \lambda x.(\text{if }x\text{ then }\CPS(a,k)\text{ else }\CPS(b,k)))
+  \end{aligned}\]
+
+For generalizing to $n$-ary functions you need to bind all $n$ operands to names, then apply.
+\end{frame}
+
+\begin{frame}[fragile]{Hidden code blowup!}
+  \[\begin{aligned}
+    &\CPS(\text{if }c\text{ then }a\text{ else }b, k)\\
+    =&\CPS(c, \lambda x.(\text{if }x\text{ then }\CPS(a,k)\text{ else }\CPS(b,k)))
+  \end{aligned}\]
+
+$k$ appears twice --- bind it before continuing!
+\end{frame}
+
+\begin{frame}{CPS TL; DR}
+  \begin{center}
+    Copy from \url{https://matt.might.net/articles/cps-conversion/}.
+  \end{center}
+  The article has a fully-featured CPS transform implementation for Scheme.
+\end{frame}
+
+\begin{frame}{Closure conversion rationale}
+  Consider the return values of $\lambda x.\lambda y.x+y$.
+
+  \[\text{func}: \text{code}\times\text{any list}\]
+\end{frame}
+
+\newcommand{\FV}{\operatorname{FV}}
+\begin{frame}{Finding free variables of Lambda Calculus terms}
+  \[\FV(x)=\{x\}\]
+  \[\FV(t_1(t_2))=\FV(t_1)\cup\FV(t_2)\]
+  \[\FV(\lambda x.t)=\FV(t)\setminus\{x\}\]
+
+  No extensions to rules necessary for Scheme extensions to the lambda calculus.
+\end{frame}
+
+\newcommand{\cloConv}{\operatorname{cloConv}}
+\newcommand{\makeClosure}{\operatorname{makeClosure}}
+\begin{frame}{Closure conversion}
+  \[
+    \begin{aligned}
+      &\cloConv(T=\lambda x.t)\\
+      =&\makeClosure(\lambda c.\lambda x.\cloConv(t)[\forall s\in\FV(T).s\to\operatorname{cloRef}(c, s)], \FV(T))
+    \end{aligned}
+  \]
+  \[
+    \cloConv(t_1(t_2))=(\lambda s. s (s) \cloConv(t_2))\cloConv(t_1)
+  \]
+\end{frame}
+
+\begin{frame}{Embedding Scheme data into a machine word}
+  \begin{itemize}
+  \item tagged union (portable)
+  \item tagged pointer (used by Chez)
+  \item NaN boxing (used by V8)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tagged pointers}
+  \begin{itemize}
+  \item A word is 8-bytes long
+  \item Pointers to 8-byte-aligned \textit{things} will have 000 as their LSBs
+  \item Use different values of the 3 LSBs to differentiate between types
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Managing memory}
+  \begin{itemize}
+  \item mark-sweep
+  \item mark-compact
+  \item mark-copy
+  \item generational?
+  \item concurrent?
+  \item parallel?
+  \end{itemize}
+
+  Start simple: use Cheney's semispace algorithm
+\end{frame}
+
+\begin{frame}{Register allocation}
+  \begin{itemize}
+  \item Best: do whole-program RA and do coalescing (since control flow is broken up into slices after the CPS pass)
+  \item Worse: \textit{whatever correct}
+  \end{itemize}
+\end{frame}
+
+\end{document}
