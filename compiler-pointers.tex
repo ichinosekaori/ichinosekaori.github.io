@@ -32,9 +32,9 @@
 
 \begin{frame}{Goals}
   \begin{itemize}
-    \item To demonstrate compiling a functional programming language to a fairly low-level language (register VM bytecode)
+    \item To demonstrate compiling a functional programming language (Scheme) to a fairly low-level language (register VM bytecode)
     \item Do it using a simple functional language
-    \item Do it using a fairly conventional VM (with the ISA mimicking commercial CPU designs)
+    \item Do it using a fairly conventional VM (with the ISA mimicking commercial CPU designs, e.g. aarch64)
   \end{itemize}
 \end{frame}
 
@@ -49,9 +49,9 @@
   \item Conditional
   \end{itemize}
 
-  Other forms are built upon these primitives through the use of macros written in the same language (Scheme)
+  Also derived forms programmed in the same language!
 
-  Some data usually not first-class are first-class: functions, continuations, environments. 
+  Some data usually not first-class are first-class: continuations, environments. 
 \end{frame}
 
 \begin{frame}{Overview of Scheme (2)}
@@ -62,9 +62,9 @@
   \item (Bytevector)
   \end{itemize}
 
-  You can build (functional even!) arrays out of conses (think segment trees) but vectors are faster; bytevectors are more compact.
+  Vectors are imperative arrays.
 
-  Data could be freed when no longer accessible, by the garbage collector.
+  Data GCed.
 \end{frame}
 
 \begin{frame}{Overview of the VM}
@@ -76,8 +76,9 @@
   \item jmp
   \item je
   \item int (``hypercalls'')
-  \item Used for avoiding outputing PE/ELF/Mach-O and complex instruction encoding
   \end{itemize}
+
+  VM for avoiding outputing PE/ELF/Mach-O or amd64/aarch64 machine code.
 
   where $R$ can be $X$ for 64-bit integers or $D$ for double-precision floats.
 \end{frame}
@@ -92,11 +93,11 @@
 
 \begin{frame}{Gaps between source and target languages}
   \begin{itemize}
-  \item No notion of abstractions in the target
-  \item No memory management in the target
-  \item Target works on numbers
-  \item Registers are limited in number
   \item Nowhere to store computation state
+  \item No notion of abstractions in the target
+  \item Target works on numbers
+  \item No memory management in the target
+  \item Registers are limited in number
   \end{itemize}
 \end{frame}
 
@@ -111,24 +112,41 @@
 Labeled passes are more traditional passes found in compilers for functional programming languages.
 \end{frame}
 
+\begin{frame}{Notes on continuations}
+  \begin{itemize}
+  \item They represent ``rest of the computation''
+  \item Semantically is a function
+  \end{itemize}
+
+  \begin{example}
+    The continuation for the $2$ in $2+3$ is $(\cdot+3)$, and it for the $1\times2$ in $(2\times3)+(1\times2)$ is $(6+\cdot)$. (assuming LtR evaluation order)
+  \end{example}
+\end{frame}
+
 \begin{frame}{Rationale for CPS}
   \begin{itemize}
-  \item Explicit continuations
+  \item Explicit continuations for capture
   \item Continuations reified as functions for free
+  \item Less code complexity
+  \item All calls are in a tail context after CPS --- space for control moved into the closure for the continuation
   %\item We have mutable state so we get delimited continuations as well (cf. \textit{Representing Monads})
   \end{itemize}
   
-  \[callcc(k, f)=f(k, \lambda x.\lambda y.k(y))\]
+  \[callcc(k, f)=f(\lambda x.\lambda y.k(y), k)\]
 \end{frame}
 
 \newcommand{\CPS}{\operatorname{CPS}}
 
 \begin{frame}{CPS for the Lambda Calculus}
-  \[t ::= x \mid \lambda x.t \mid t(t)\]
+  \begin{definition}[Lambda terms]
+    \[t ::= x \mid \lambda x.t \mid t\ t\]
+  \end{definition}
   
-  \[\CPS(x, k)=k(x)\]
-  \[\CPS(\lambda x.t, c)=c(\lambda k.\lambda x. \CPS(t, k))\]
-  \[\CPS(t_1(t_2), k)=\CPS(t_1,\lambda r_1.\CPS(t_2,\lambda r_2.r_1(k)(r_2)))\]
+  \begin{theorem}
+    \[\CPS(x, k)=k\ x\]
+    \[\CPS(\lambda x.t, c)=c(\lambda k.\lambda x. \CPS(t, k))\]
+    \[\CPS(t_1(t_2), k)=\CPS(t_1,\lambda r_1.\CPS(t_2,\lambda r_2.r_1(k)(r_2)))\]
+  \end{theorem}
 \end{frame}
 
 \begin{frame}{Generalizing}
@@ -167,9 +185,11 @@ $k$ appears twice --- bind it before continuing!
 
 \newcommand{\FV}{\operatorname{FV}}
 \begin{frame}{Finding free variables of Lambda Calculus terms}
-  \[\FV(x)=\{x\}\]
-  \[\FV(t_1(t_2))=\FV(t_1)\cup\FV(t_2)\]
-  \[\FV(\lambda x.t)=\FV(t)\setminus\{x\}\]
+  \begin{theorem}
+    \[\FV(x)=\{x\}\]
+    \[\FV(t_1(t_2))=\FV(t_1)\cup\FV(t_2)\]
+    \[\FV(\lambda x.t)=\FV(t)\setminus\{x\}\]
+  \end{theorem}
 
   No extensions to rules necessary for Scheme extensions to the lambda calculus.
 \end{frame}
@@ -220,7 +240,7 @@ $k$ appears twice --- bind it before continuing!
 \begin{frame}{Register allocation}
   \begin{itemize}
   \item Best: do whole-program RA and do coalescing (since control flow is broken up into slices after the CPS pass)
-  \item Worse: \textit{whatever correct}
+  \item Worse: \textit{whatever correct}.
   \end{itemize}
 \end{frame}
 
