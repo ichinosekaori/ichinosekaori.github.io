@@ -82,6 +82,7 @@
 
 \begin{frame}{Overview of the VM}
   \begin{itemize}
+  \item lea
   \item mov
   \item ld, st
   \item ldi
@@ -90,10 +91,9 @@
   \item je
   \item int (``hypercalls'')
   \end{itemize}
-
-  VM for avoiding outputing PE/ELF/Mach-O or amd64/aarch64 machine code.
-
   where $R$ can be $X$ for 64-bit integers or $D$ for double-precision floats.
+  
+  VM for avoiding outputing PE/ELF/Mach-O or amd64/aarch64 machine code.
 \end{frame}
 
 \begin{frame}{Merits of programming in Scheme}
