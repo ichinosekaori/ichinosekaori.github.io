@@ -116,7 +116,7 @@
 
 \begin{frame}[fragile]{Compiler organization}
   \[\begin{tikzcd}
-\text{Scheme} \arrow[d]           & \text{Closed} \arrow[r]      & \text{Indexed} \arrow[d, "\text{register allocation}" description]      \\
+\text{Scheme} \arrow[d]           & \text{Closed} \arrow[r]      & \text{3-address} \arrow[d, "\text{register allocation}" description]      \\
 \text{Primitive Scheme} \arrow[d] & \text{Known-adic} \arrow[u, "\text{closure conversion}"]  & \text{Bounded-free} \arrow[d] \\
 \text{Scheme form} \arrow[d]      & \text{CPS} \arrow[u]         & \text{VM bytecode}            \\
 \text{Unique-names} \arrow[r]     & \text{Assignless} \arrow[u, "\text{CPS transform}" description] &                              
