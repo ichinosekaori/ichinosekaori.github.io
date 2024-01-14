@@ -1,8 +1,8 @@
 \documentclass{beamer}
 
-\title[FP Compilers]{Pointers to General Resources on FP Language Compiler Construction}
+\title[Compiling FP]{Pointers to General Resources on FP Language Compiler Construction}
 \author{Ichinose Kaori}
-\date{January 28, 2024}
+\date{January 14, 2024}
 
 \usepackage{tikz-cd}
 \usepackage{amsmath}
@@ -15,7 +15,19 @@
 
 \maketitle
 
-\begin{frame}{TL; DW (1)}
+\begin{frame}{Step 0: Learn FP}
+  \begin{itemize}
+  \item \textit{Practical Common Lisp}
+  \item \textit{On Lisp}
+  \item \textit{R\textsuperscript{5}RS}
+  \item \textit{The Little Schemer}
+  \item \textit{Structure and Interpretation of Computer Programs}
+  \item \textit{ML for the Working Programmer}
+  \item CS3110
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{TL; DW}
   \begin{itemize}
   \item \url{https://matt.might.net/articles/cps-conversion/}
   \item \url{https://matt.might.net/articles/compiling-scheme-to-c/}
@@ -25,6 +37,7 @@
   \item \url{https://www.youtube.com/watch?v=M4dwcdK5bxE}
   \item \url{https://gist.github.com/nyuichi/1116686}
   \item \url{http://scheme2006.cs.uchicago.edu/11-ghuloum.pdf}
+  \item \href{https://github.com/cisco/ChezScheme/blob/main/IMPLEMENTATION.md}{ChezScheme/IMPLEMENTATION.md}
   \item \url{https://github.com/ichinosekaori/yass/} (possibly later)
   \item \textit{Compiling with Continuations}
   \end{itemize}
@@ -112,6 +125,15 @@
 Labeled passes are more traditional passes found in compilers for functional programming languages.
 \end{frame}
 
+\begin{frame}{Passes specific to Scheme}
+  \begin{itemize}
+  \item Macro expansion
+  \item Unsplice
+  \item Assignment conversion
+  \item Variadic function elimination
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{Notes on continuations}
   \begin{itemize}
   \item They represent ``rest of the computation''
@@ -129,10 +151,11 @@ Labeled passes are more traditional passes found in compilers for functional pro
   \item Continuations reified as functions for free
   \item Less code complexity
   \item All calls are in a tail context after CPS --- space for control moved into the closure for the continuation
+  \item More optimization opportunities
   %\item We have mutable state so we get delimited continuations as well (cf. \textit{Representing Monads})
   \end{itemize}
   
-  \[callcc(k, f)=f(\lambda x.\lambda y.k(y), k)\]
+  \[callcc(k, f)=f(\lambda k'.\lambda y.k(y), k)\]
 \end{frame}
 
 \newcommand{\CPS}{\operatorname{CPS}}
@@ -178,9 +201,11 @@ $k$ appears twice --- bind it before continuing!
 \end{frame}
 
 \begin{frame}{Closure conversion rationale}
-  Consider the return values of $\lambda x.\lambda y.x+y$.
+  \begin{example}
+    Consider the (different) return values of $\lambda x.\lambda y.x+y$.
+  \end{example}
 
-  \[\text{func}: \text{code}\times\text{any list}\]
+    \[\text{func}: \text{code}\times\text{any list}\]
 \end{frame}
 
 \newcommand{\FV}{\operatorname{FV}}
@@ -194,13 +219,13 @@ $k$ appears twice --- bind it before continuing!
   No extensions to rules necessary for Scheme extensions to the lambda calculus.
 \end{frame}
 
-\newcommand{\cloConv}{\operatorname{cloConv}}
-\newcommand{\makeClosure}{\operatorname{makeClosure}}
+\newcommand{\cloConv}{\operatorname{ccvt}}
+\newcommand{\makeClosure}{\operatorname{mkc}}
 \begin{frame}{Closure conversion}
   \[
     \begin{aligned}
       &\cloConv(T=\lambda x.t)\\
-      =&\makeClosure(\lambda c.\lambda x.\cloConv(t)[\forall s\in\FV(T).s\to\operatorname{cloRef}(c, s)], \FV(T))
+      =&\makeClosure(\lambda c.\lambda x.\cloConv(t)[\forall s\in\FV(T).s\to\operatorname{cref}(c, s)], \FV(T))
     \end{aligned}
   \]
   \[
@@ -208,7 +233,7 @@ $k$ appears twice --- bind it before continuing!
   \]
 \end{frame}
 
-\begin{frame}{Embedding Scheme data into a machine word}
+\begin{frame}{Embedding Scheme data into machine words}
   \begin{itemize}
   \item tagged union (portable)
   \item tagged pointer (used by Chez)
@@ -222,6 +247,8 @@ $k$ appears twice --- bind it before continuing!
   \item Pointers to 8-byte-aligned \textit{things} will have 000 as their LSBs
   \item Use different values of the 3 LSBs to differentiate between types
   \end{itemize}
+
+  See \href{https://github.com/cisco/ChezScheme/blob/main/IMPLEMENTATION.md}{ChezScheme/IMPLEMENTATION.md}.
 \end{frame}
 
 \begin{frame}{Managing memory}
@@ -242,6 +269,27 @@ $k$ appears twice --- bind it before continuing!
   \item Best: do whole-program RA and do coalescing (since control flow is broken up into slices after the CPS pass)
   \item Worse: \textit{whatever correct}.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Ideas for more work}
+  \begin{itemize}
+  \item More refined types
+  \item Evaluation and environments
+  \item Light processes
+  \item Pattern matching
+  \item Multi-dispatch methods
+  \item Staged and safe code
+  \item FBIP
+  \item Zombie!
+  \item Native backend
+  \item More advanced RA/GC/optimizations
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    Slides at \url{https://ichinosekaori.github.io/compiler-pointers.pdf}
+  \end{center}
 \end{frame}
 
 \end{document}
